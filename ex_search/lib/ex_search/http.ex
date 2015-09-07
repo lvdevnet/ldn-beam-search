@@ -14,7 +14,7 @@ defmodule ExSearch.HTTP do
     opts
   end
 
-  get "/" do
+  get "/content" do
     q = decode(conn.query_string)["q"] |> String.split(" ", trim: true)
     info("GET /", [query: Enum.join(q, "+")])
 
