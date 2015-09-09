@@ -9,9 +9,15 @@ class SingleWord extends Simulation {
   val httpConf = http
     .baseURL("http://localhost:4000")
 
+  val data = csv("data.csv").random
+
   val scn = scenario("Get single word")
+    .feed(data)
     .exec(http("request")
-      .get("/content?q=game"))
+      .get("/content?q=${word}")
+      .check(regex("""(.+\n?)""").count.is(session => session("lineCount").as[String].toInt))
+      .check(substring("${expectedPhrase}"))
+    )
 
   setUp(
     scn.inject(
