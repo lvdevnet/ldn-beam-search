@@ -15,7 +15,8 @@ defmodule ExSearch.Mixfile do
 
   defp deps do
     [{:cowboy, "~> 1.0.0"},
-     {:plug, "~> 1.0"}]
+     {:plug, "~> 1.0"},
+     {:exredis, "~> 0.2.0"}]
   end
 
   defp aliases do

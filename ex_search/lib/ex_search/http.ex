@@ -18,8 +18,9 @@ defmodule ExSearch.HTTP do
     q = decode(conn.query_string)["q"] |> String.split(" ", trim: true)
     info("GET /", [query: Enum.join(q, "+")])
 
-    res = Agent.get(__MODULE__, fn(index) -> find_docs(index, q) end)
-    |> Enum.join("\n")
+   #res = Agent.get(__MODULE__, fn(index) -> find_docs(index, q) end)
+   #|> Enum.join("\n")
+    res = ExSearch.Redis.find_docs(q) |> Enum.map_join("\n", &("#{elem(&1, 0)},#{elem(&1, 1)}"))
     conn
     |> put_resp_content_type("text/plain")
     |> send_resp(200, res)
