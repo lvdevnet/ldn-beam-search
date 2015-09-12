@@ -1,48 +1,68 @@
+import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileStatic
+import groovyx.gpars.actor.Actor
+import static groovyx.gpars.actor.Actors.actor
 import org.xml.sax.Attributes
 import org.xml.sax.SAXException
 
 class Converter {
     String xml
-    int chunk, current = -1, written = -1
-    BufferedWriter out
+    int chunk, nfiles, total, current = 0, written = 0
+    List<Actor> writers
+    AtomicInteger inflight = new AtomicInteger(0)
     def stopwords = Stopwords.instance.words
 
-    Converter(String _xml, int _chunk) {
-        xml = _xml; chunk = _chunk
+    Converter(String _xml, int _chunk, int _nfiles) {
+        xml = _xml; chunk = _chunk; nfiles = _nfiles
+        total = nfiles*chunk
     }
 
     void convert() {
+        writers = (0..nfiles-1).collect { n ->
+            BufferedWriter out = new File("txt/wiki-${n}.txt").newWriter('UTF-8')
+            actor {
+                loop {
+                    react { msg ->
+                        if (msg == 'exit') {
+                            out.close()
+                            terminate()
+                        } else {
+                            inflight.decrementAndGet()
+                            def (id, title, text) = msg
+                            List<String> tokens = tokenize(text)
+                            if (tokens)
+                                out << sanitize(id) << '\n' << sanitize(title) << '\n' << tokens.join(' ') << '\n'
+                        }
+                    }
+                }
+            }
+        }
         javax.xml.parsers.SAXParserFactory.newInstance().newSAXParser().parse(xml, new Parser())
     }
 
     @CompileStatic
     void document(String id, String title, String text) {
         if (!makesense(text)) return
-        rotate()
-        List<String> tokens = tokenize(text)
-        if (tokens) {
-            out << sanitize(id) << '\n' << sanitize(title) << '\n' << tokens.join(' ') << '\n'
-            ++written
-            if (written % 1000 == 0) print('.')
+        writers[current++ % nfiles] << [id, title, text]
+        inflight.incrementAndGet()
+        if (written++ % 10_000 == 0) print(written-1)
+        else if (written % 1_000 == 0) print('.')
+        if (written >= total) {
+            while (inflight.get() > 0) {
+                print((total-inflight.get()) + '.')
+                Thread.sleep(1000)
+            }
+            writers.each { it << 'exit'; it.join() }
+            println(total)
+            System.exit(0)
         }
+        while (inflight.get() > 1000)
+            Thread.sleep(100)
     }
 
     @CompileStatic
     boolean makesense(String text) {
         !text.startsWith('#REDIRECT ') && !text.startsWith('#redirect ')
-    }
-
-    @CompileStatic
-    void rotate() {
-        if (written >= chunk || written == -1) {
-            if (out) out.close()
-            ++current
-            if (current > 9) System.exit(0)
-            print(current*chunk + '.')
-            out = new File("txt/wiki-${current}.txt").newWriter('UTF-8')
-            written = 0
-        }
     }
 
     @CompileStatic
@@ -53,9 +73,11 @@ class Converter {
     def splitter = ~/[\s,\.\?!"':=\|\<\>\(\)\[\]\{\}\/\\]+/
     List<String> tokenize(String s) {
         String prev = ''
-        // Groovy unique() is O(N^2) :/
         splitter.split(s)
-                .grep { it.length() > 2 } .collect { it.toLowerCase() } .grep { !stopwords.contains(it) }
+                .grep { it.length() > 2 && it.charAt(0).isLetter() }
+                .collect { it.toLowerCase() }
+                .grep { !stopwords.contains(it) }
+                // Groovy unique() is O(N^2) :/
                 .sort().inject([]) { uniq, token ->
                                         if (token != prev) {
                                             uniq << token
@@ -113,4 +135,4 @@ class Stopwords {
         } .flatten() as Set
 }
 
-new Converter('enwiki-20150901-pages-articles.xml', 10_000).convert()
+new Converter('enwiki-20150901-pages-articles.xml', 10_000, 10).convert()
