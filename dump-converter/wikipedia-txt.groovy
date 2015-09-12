@@ -70,7 +70,7 @@ class Converter {
         text.replaceAll(/[\n\r]+/, '')
     }
 
-    def splitter = ~/[\s,\.\?!"':=\|\<\>\(\)\[\]\{\}\/\\]+/
+    def splitter = ~/[\s,\.\?!"':=\|\<\>\(\)\[\]\{\}\/\\_-]+/
     List<String> tokenize(String s) {
         String prev = ''
         splitter.split(s)
