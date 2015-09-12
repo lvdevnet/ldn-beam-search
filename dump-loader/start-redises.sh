@@ -22,7 +22,7 @@ for i in $(seq 0 $((n-1))); do
 daemonize no
 port $port
 loglevel verbose
-logfile stdout
+logfile ""
 #databases 32
 #save 900 1
 #save 300 10
