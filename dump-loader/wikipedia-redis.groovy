@@ -8,9 +8,11 @@ import redis.clients.jedis.Jedis
 
 class Loader {
     File dir
+    boolean cluster
 
-    Loader(String _dir) {
+    Loader(String _dir, boolean _cluster) {
         dir = new File(_dir)
+        cluster = _cluster
     }
 
     String _token = 't:'
@@ -22,9 +24,9 @@ class Loader {
                 files << file
         }
         int total = withPool(files.size()) {
-            files.collectParallel { file ->
+            [files, files.indices].transpose().collectParallel { file, index ->
                 int loaded = 0
-                Jedis redis = new Jedis('localhost', 6379, 20_000) // 20 sec
+                Jedis redis = new Jedis('localhost', 6379 + cluster ? index : 0, 10_000) // 10 sec
                 def pipe = redis.pipelined()
                 file.withReader('UTF-8') { reader ->
                     while (true) {
@@ -47,4 +49,4 @@ class Loader {
     }
 }
 
-new Loader('txt').load()
+new Loader('txt', false).load()
