@@ -24,8 +24,8 @@ func main() {
 	var titles map[string]string
 	var bitmaps map[string][]uint64
 
-	articles := flag.String("articles", "", "Directory to load txt files from")
-	limit := flag.Uint("limit", 0, "Limit on the number of articles to read")
+	articles := flag.String("articles", "", "Directory to load *.txt files from")
+	limit := flag.Uint("limit", 0, "Max number of articles to read")
 	cutoff := flag.Uint("cutoff", 10, "Number of articles a word must appear into to be included in index")
 	memlim := flag.Uint("memory", 0, "Target index final memory consumption in MB")
 	flag.Parse()
@@ -161,8 +161,16 @@ func readArticle(reader *bufio.Reader) (string, string, string) {
 	return id, title, content
 }
 
+func progress(i uint) {
+	if i%10000 == 0 {
+		fmt.Print(i)
+	} else if i%1000 == 0 {
+		fmt.Print(".")
+	}
+}
+
 func loadArticles(articles string, limit, cutoff, memlim uint) ([]string, map[string]string, map[string][]uint64) {
-	// prepare list of txt files
+	// prepare list of text files
 	_files, err := ioutil.ReadDir(articles)
 	if err != nil {
 		log.Fatal(err)
@@ -213,12 +221,14 @@ func loadArticles(articles string, limit, cutoff, memlim uint) ([]string, map[st
 				}
 				unique[word] = count
 			}
+			progress(nArticles)
 			nArticles += 1
 			if limit > 0 && nArticles >= limit {
 				return true
 			}
 			return false
 		})
+	fmt.Printf(".%v\n", nArticles)
 	log.Printf("total %v unique words\n", len(unique))
 
 	if nArticles <= cutoff {
@@ -252,36 +262,38 @@ func loadArticles(articles string, limit, cutoff, memlim uint) ([]string, map[st
 	var index uint = 0
 	iterate(
 		func(id, title, content string) bool {
-			indices[index] = id
-			titles[id] = title
 			addr := index / 64
 			bit := index % 64
 			var mask uint64 = 1 << bit
 			words := strings.Split(content, " ")
+			articleLoaded := false
 			for _, word := range words {
 				bitmap, exist := bitmaps[word]
 				if exist {
 					bitmap[addr] |= mask
+					articleLoaded = true
 				}
 			}
-			if index%10000 == 0 {
-				fmt.Print(index)
-			} else if index%1000 == 0 {
-				fmt.Print(".")
-			}
-			index += 1
-			if index >= nArticles {
-				return true
+			if (articleLoaded) {
+				indices[index] = id
+				titles[id] = title
+				progress(index)
+				index += 1
+				if index >= nArticles {
+					return true
+				}
 			}
 			return false
 		})
 
 	fmt.Printf(".%v\n", index)
+	log.Printf("loaded %v articles", index)
 
 	debug.FreeOSMemory()
 	return indices, titles, bitmaps
 }
 
+// sort map[string]int by value and return []KV in descending order
 type KV struct {
 	Key   string
 	Value uint
