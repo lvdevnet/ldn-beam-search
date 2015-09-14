@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-redis=/home/arkadi/Work/redis-3.0.3/src/redis-server
+redis=/usr/local/bin/redis-server
 n=10
 dir=/var/tmp
 base_port=6379
