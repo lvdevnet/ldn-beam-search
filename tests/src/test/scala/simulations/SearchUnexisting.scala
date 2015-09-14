@@ -9,12 +9,13 @@ import scala.concurrent.duration._
 
 class SearchUnexisting extends Simulation {
 
+  val url = System.getProperty("url", "localhost:4000")
   val rampFrom = Double.valueOf(System.getProperty("rampFrom", "10"))
   val rampTo = Double.valueOf(System.getProperty("rampTo", "200"))
   val rampDuring = Integer.valueOf(System.getProperty("rampDuring", "30"))
 
   val httpConf = http
-    .baseURL("http://localhost:4000")
+    .baseURL(s"http://$url")
 
   val scn = scenario("Get unexisting phrase")
     .exec(
