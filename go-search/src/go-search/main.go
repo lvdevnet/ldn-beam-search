@@ -30,14 +30,17 @@ func main() {
 	memlim := flag.Uint("memory", 0, "Target index final memory consumption in MB")
 	flag.Parse()
 
+	var bindAddr string
 	if *articles != "" {
 		indices, titles, bitmaps = loadArticles(*articles, *limit, *cutoff, *memlim)
+		bindAddr = ":4088"
 	} else {
 		var err error
 		redis, err = radix.Dial("tcp", "localhost:6379")
 		if err != nil {
 			log.Fatal(err)
 		}
+		bindAddr = ":4080"
 	}
 
 	http.HandleFunc("/content", func(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +57,7 @@ func main() {
 		}
 	})
 	s := &http.Server{
-		Addr:         ":4080",
+		Addr:         bindAddr,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
