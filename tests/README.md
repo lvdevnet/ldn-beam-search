@@ -1,8 +1,12 @@
 Performance test
 =========================
 
-Execute `SingleWord` simulation:
+Execute simulation:
 
 ```
-$mvn gatling:execute -Dgatling.simulationClass=simulations.SingleWord
+$ mvn gatling:execute -Dgatling.simulationClass=simulations.<name>
 ```
+
+Available simulations:
+
+* `SearchPhrase`
