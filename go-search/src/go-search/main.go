@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	radix "github.com/mediocregopher/radix.v2/redis"
+	radix "github.com/mediocregopher/radix.v2/pool"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	var redis *radix.Client
+	var redis *radix.Pool
 	var indices []string
 	var titles map[string]string
 	var bitmaps map[string][]uint64
@@ -36,7 +36,7 @@ func main() {
 		bindAddr = ":4088"
 	} else {
 		var err error
-		redis, err = radix.Dial("tcp", "localhost:6379")
+		redis, err = radix.New("tcp", "localhost:6379", 10)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func main() {
 	log.Fatal(s.ListenAndServe())
 }
 
-func askRedis(w http.ResponseWriter, words []string, redis *radix.Client) {
+func askRedis(w http.ResponseWriter, words []string, pool *radix.Pool) {
 	w.Header().Add("Server", "go-search/redis")
 	const (
 		_token   = "t:"
@@ -75,9 +75,16 @@ func askRedis(w http.ResponseWriter, words []string, redis *radix.Client) {
 	for i, word := range words {
 		tokens[i] = _token + word
 	}
+	redis, err := pool.Get()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Redis error: %v", err), http.StatusInternalServerError)
+		// do not return connection into the pool
+		return
+	}
 	rIds := redis.Cmd("SINTER", tokens)
 	if rIds.Err != nil {
 		http.Error(w, fmt.Sprintf("Redis error: %v", rIds.Err), http.StatusInternalServerError)
+		// do not return connection into the pool
 		return
 	}
 	lIds, _ := rIds.List()
@@ -91,6 +98,7 @@ func askRedis(w http.ResponseWriter, words []string, redis *radix.Client) {
 		}
 		fmt.Fprintf(w, "%v,%v\n", id, title)
 	}
+	pool.Put(redis)
 }
 
 func searchMemory(w http.ResponseWriter, words []string, indices []string, titles map[string]string, bitmaps map[string][]uint64) {
