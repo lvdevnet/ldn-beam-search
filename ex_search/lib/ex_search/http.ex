@@ -3,20 +3,20 @@ import Logger
 defmodule ExSearch.HTTP do
   use Plug.Router
   import Plug.Conn.Query
-  import ExSearch.Index
+ #import ExSearch.Index
 
   plug :match
   plug :dispatch
 
   def init(opts) do
-    Agent.start_link(fn -> load_index() end, name: __MODULE__)
+   #Agent.start_link(fn -> load_index() end, name: __MODULE__)
     info("Running")
     opts
   end
 
   get "/content" do
     q = decode(conn.query_string)["q"] |> String.split(" ", trim: true)
-    info("GET /", [query: Enum.join(q, "+")])
+   #info("GET /", [query: Enum.join(q, "+")])
 
    #res = Agent.get(__MODULE__, fn(index) -> find_docs(index, q) end)
    #|> Enum.join("\n")
