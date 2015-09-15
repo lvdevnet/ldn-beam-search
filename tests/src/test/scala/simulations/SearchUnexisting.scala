@@ -23,6 +23,7 @@ class SearchUnexisting extends Simulation {
 
   val httpConf = http
     .baseURL(s"http://$url")
+    .connection("keep-alive")
 
   val scn = scenario("Get unexisting phrase")
     .exec(

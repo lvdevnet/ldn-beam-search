@@ -23,6 +23,7 @@ class SearchPhrase extends Simulation {
 
   val httpConf = http
     .baseURL(s"http://$url")
+    .connection("keep-alive")
 
   val data = csv("data.csv").random
   val scn = scenario("Get phrase")
