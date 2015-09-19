@@ -31,4 +31,3 @@ defmodule ExSearch.HTTP do
     send_resp(conn, 404, "not found\n")
   end
 end
-

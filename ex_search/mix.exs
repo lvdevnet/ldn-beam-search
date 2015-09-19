@@ -16,6 +16,7 @@ defmodule ExSearch.Mixfile do
   defp deps do
     [{:cowboy, "~> 1.0.3"},
      {:plug, "~> 1.0.1"},
+     {:poolboy, "~> 1.5.1"},
      {:exredis, "~> 0.2.0"}]
   end
 
