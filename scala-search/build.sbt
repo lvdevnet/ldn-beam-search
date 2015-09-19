@@ -1,3 +1,4 @@
+javaOptions in container ++= Seq("-Xms512m", "-Xmx512m", "-Xss1m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=20")
 lazy val scalatraVersion = "2.3.1"
 lazy val root = (project in file(".")).settings(
   organization := "ldn",
