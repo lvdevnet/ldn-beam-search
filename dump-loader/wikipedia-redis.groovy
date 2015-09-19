@@ -62,7 +62,7 @@ class Loader {
         int total = withPool(nthreads) {
             [files, files.indices].transpose().collectParallel { File file, int index ->
                 int loaded = 0
-                Jedis redis = new Jedis('localhost', 6379 + (cluster ? index : 0), 10_000) // 10 sec
+                Jedis redis = new Jedis('localhost', 6379 + (cluster ? index+1 : 0), 10_000) // 10 sec
                 Pipeline pipe = redis.pipelined()
                 file.withReader('UTF-8') { Reader reader ->
                     while (true) {
@@ -87,4 +87,4 @@ class Loader {
     }
 }
 
-new Loader('../dump-converter/txt', true, 100_000, 50).load()
+new Loader('../dump-converter/txt', false, 100_000, 50).load()

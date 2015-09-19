@@ -15,7 +15,7 @@ kill_redises() {
     wait
 }
 
-for i in $(seq 0 $((n-1))); do
+for i in $(seq 1 $n); do
     port=$((base_port+i))
     config=redis-$port.conf
     cat > $config <<EOC
