@@ -3,7 +3,7 @@
 let express = require('express');
 let app = express();
 let Redis = require('ioredis');
-let redis = new Redis({host: 'elixir.hosting.lv'});
+let redis = new Redis({host: '127.0.0.1'});
 var cluster = require('cluster');
 var cpuCount = require('os').cpus().length;
 
