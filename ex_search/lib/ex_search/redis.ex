@@ -9,7 +9,7 @@ defmodule ExSearch.Redis do
     pool_opts = [
       name: {:local, :exredis_poolboy},
       worker_module: Exredis,
-      size: 10,
+      size: 110,
       max_overflow: 1000,
     ]
     children = [
@@ -27,8 +27,9 @@ defmodule ExSearch.Redis do
 
   def find_docs(redis, words) do
     import Exredis.Api
-    redis |> sinter(Enum.map(words, fn(str) -> @token <> String.downcase(str) end))
-    |> Enum.map(fn(id) -> { id, redis |> get(@content <> id) } end)
+    ids = redis |> sinter(Enum.map(words, fn(str) -> @token <> String.downcase(str) end))
+    titles = redis |> mget(Enum.map(ids, fn(str) -> @content <> str end))
+    Enum.zip(ids, titles)
   end
 
 end

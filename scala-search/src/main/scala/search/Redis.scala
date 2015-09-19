@@ -2,6 +2,7 @@ package search
 
 import akka.actor.ActorSystem
 import org.scalatra._
+//import redis.{RedisServer, RedisClientPool}
 import redis.RedisClient
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,6 +16,7 @@ class Redis(_akka: ActorSystem) extends ScalatraServlet with FutureSupport {
   implicit def executor = akka.dispatcher
   implicit val timeout = 5.seconds
 
+//val redis = RedisClientPool(1.to(10).map { _ => RedisServer() })
   val redis = RedisClient()
 
   val _token   = "t:"
@@ -24,13 +26,14 @@ class Redis(_akka: ActorSystem) extends ScalatraServlet with FutureSupport {
     params.get("q").map { q =>
       val tokens = q.split(' ').map(_token + _)
       redis.sinter[String](tokens(0), tokens:_* /*rediscala wtf!*/).flatMap { ids =>
-        Future.sequence {
-          ids.map { id =>
-            redis.get[String](_content + id).map(id + "," + _.getOrElse("(none)"))
-          }
-        } .map(_.mkString("\n"))
+        redis.mget[String](ids.map(_content + _):_*).map { titles =>
+          ids.zip(titles)
+        }
+      } .map { tuples =>
+        tuples.map { case (id, title) =>
+          id + "," + title.getOrElse("(none)")
+        } .mkString("\n")
       }
-
     } .getOrElse(Future.successful("Usage: /content?q=ask+me"))
   }
 }

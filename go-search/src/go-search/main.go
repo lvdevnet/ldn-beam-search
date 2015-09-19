@@ -88,17 +88,21 @@ func askRedis(w http.ResponseWriter, words []string, pool *radix.Pool) {
 		return
 	}
 	lIds, _ := rIds.List()
-	for _, id := range lIds {
-		rContent := redis.Cmd("GET", _content+id)
-		var title string
-		if rIds.Err != nil {
-			title = fmt.Sprintf("(redis error: %v)", rIds.Err)
-		} else {
-			title, _ = rContent.Str()
-		}
-		fmt.Fprintf(w, "%v,%v\n", id, title)
+	titles := make([]string, len(lIds))
+	for i, id := range lIds {
+		titles[i] = _content + id
 	}
+	rTitles := redis.Cmd("MGET", titles)
+	if rTitles.Err != nil {
+		http.Error(w, fmt.Sprintf("Redis error: %v", rTitles.Err), http.StatusInternalServerError)
+		// do not return connection into the pool
+		return
+	}
+    lTitles, _ := rTitles.List()
 	pool.Put(redis)
+	for i, id := range lIds {
+		fmt.Fprintf(w, "%v,%v\n", id, lTitles[i])
+	}
 }
 
 func searchMemory(w http.ResponseWriter, words []string, indices []string, titles map[string]string, bitmaps map[string][]uint64) {
